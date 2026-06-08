@@ -47,6 +47,56 @@ extern "C" {
     //Basic IO.
     int SioGetchar(SealIO *);
     int SioPutchar(SealIO *, const int);
+
+    //==========================================================================
+    // Compatibility shim: maps the newer Seal "VirtualPort" IO API (used by
+    // uELMO, which tracks the private sca-research/Seal) onto this release's
+    // SealIO / Sio* API. Header-only (static inline) -> no .so rebuild needed.
+    //==========================================================================
+#ifndef SEAL_VIRTUALPORT_COMPAT
+#define SEAL_VIRTUALPORT_COMPAT
+    typedef SealIO SealVirtualPort;
+
+    // Remove a stale socket file. SioOpen() also unlinks; kept for API parity.
+    static inline void SealCleanPort(const char *path)
+    {
+	unlink(path);
+    }
+
+    // Open a server port and block until the peer connects (READY state).
+    static inline SealVirtualPort *SealOpenPort(const char *path)
+    {
+	SealIO *io = SioOpen(path);
+	if (NULL == io)
+	    return NULL;
+	if (SEAL_SUCCESS != SioWaitConn(io))
+	    {
+		SioClose(io);
+		return NULL;
+	    }
+	return io;
+    }
+
+    // Close the port and NULL the caller's handle.
+    static inline void SealClosePort(SealVirtualPort **pp)
+    {
+	if (NULL == pp || NULL == *pp)
+	    return;
+	SioClose(*pp);
+	*pp = NULL;
+    }
+
+    static inline int SealGetchar(SealVirtualPort *io)
+    {
+	return SioGetchar(io);
+    }
+
+    static inline int SealPutchar(SealVirtualPort *io, const int c)
+    {
+	return SioPutchar(io, c);
+    }
+#endif				/* SEAL_VIRTUALPORT_COMPAT */
+
 #ifdef __cplusplus
 }
 #endif
