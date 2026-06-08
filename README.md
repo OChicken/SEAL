@@ -1,5 +1,5 @@
 ## setup.sh ##
-Configure with "source setup.sh".
+Configure with `bash setup.sh`.
 
 ## Dependencies ##
 (Tested on Ubuntu 22.04 LTS)
